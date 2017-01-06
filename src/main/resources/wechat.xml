@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<wechat-accounts default="truncate">
+    <wechat-account id="truncate">
+        <appid>wx34edbb8c0f5cbad0</appid>
+        <secret>4b8f38576a56dd79e6e06c30579801a7</secret>
+    </wechat-account>
+</wechat-accounts>
