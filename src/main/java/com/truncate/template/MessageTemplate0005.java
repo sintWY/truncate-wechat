@@ -16,8 +16,8 @@ import java.util.Set;
 /**
  * 描述: //TODO 类描述
  * 版权: Copyright (c) 2017
- * 公司: 思迪科技 
- * 作者: 王功俊(wanggj@thinkive.com)
+ * 公司:
+ * 作者: truncate(wy940407@163.com)
  * 版本: 1.0 
  * 创建日期: 2017年01月05日
  * 创建时间: 21:08
@@ -99,10 +99,5 @@ public class MessageTemplate0005 extends BaseMessageTemplate
 				}
 			}
 		}
-	}
-
-	public static void main(String[] args)
-	{
-		System.out.println(questionMap);
 	}
 }

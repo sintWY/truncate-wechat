@@ -9,8 +9,8 @@ import java.util.*;
 /**
  * 描述: Json工具类
  * 版权: Copyright (c) 2016
- * 公司: 思迪科技 
- * 作者: 王功俊(wanggj@thinkive.com)
+ * 公司:
+ * 作者: truncate(wy940407@163.com)
  * 版本: 1.0 
  * 创建日期: 2016年12月29日
  * 创建时间: 15:38
@@ -87,5 +87,10 @@ public class JsonUtil
 			}
 		}
 		return resultList;
+	}
+
+	public static void main(String[] args)
+	{
+		System.out.println(toList("[{'a':'1'},{'b':'2'}]"));
 	}
 }

@@ -16,8 +16,8 @@ import java.util.Map;
 /**
  * 描述: 公众账号工厂类
  * 版权: Copyright (c) 2017
- * 公司: 思迪科技 
- * 作者: 王功俊(wanggj@thinkive.com)
+ * 公司:
+ * 作者: truncate(wy940407@163.com)
  * 版本: 1.0 
  * 创建日期: 2017年01月03日
  * 创建时间: 12:50

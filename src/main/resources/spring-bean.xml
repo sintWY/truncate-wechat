@@ -5,5 +5,5 @@
 	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 
     <bean id="IMessageTemplateService" class="com.truncate.service.impl.MessageTemplateServiceImpl"/>
-    <bean id="IBaiduApiService" class="com.truncate.service.impl.BaiduApiServiceImpl"/>
+    <bean id="ICommonApiService" class="com.truncate.service.impl.AliCommonApiServiceImpl"/>
 </beans>

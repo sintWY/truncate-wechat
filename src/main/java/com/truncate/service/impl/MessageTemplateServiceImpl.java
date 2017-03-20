@@ -6,15 +6,14 @@ import com.truncate.constant.WechatConstant;
 import com.truncate.service.IMessageTemplateService;
 import com.truncate.template.BaseMessageTemplate;
 import com.truncate.template.DefaultMessageTemplate;
-import com.truncate.util.SpringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 /**
  * 描述: 消息模板接口实现类
  * 版权: Copyright (c) 2017
- * 公司: 思迪科技 
- * 作者: 王功俊(wanggj@thinkive.com)
+ * 公司:
+ * 作者: truncate(wy940407@163.com)
  * 版本: 1.0 
  * 创建日期: 2017年01月04日
  * 创建时间: 14:05
@@ -79,10 +78,5 @@ public class MessageTemplateServiceImpl implements IMessageTemplateService
 
 	public static void main(String[] args)
 	{
-		InMessage inMessage = new InMessage();
-		inMessage.setMessageType(WechatConstant.MessageType.TEXT_MESSAGE);
-		inMessage.setContent("https://www.baidu.com");
-		IMessageTemplateService templateService = SpringUtil.getBean("IMessageTemplateService", IMessageTemplateService.class);
-		System.out.println(templateService.findMatchTemplate(inMessage).getClass());
 	}
 }

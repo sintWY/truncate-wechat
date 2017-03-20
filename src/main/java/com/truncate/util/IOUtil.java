@@ -1,5 +1,6 @@
 package com.truncate.util;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -9,8 +10,8 @@ import java.io.InputStreamReader;
 /**
  * 描述: //TODO 类描述
  * 版权: Copyright (c) 2017
- * 公司: 思迪科技
- * 作者: 王功俊(wanggj@thinkive.com)
+ * 公司:
+ * 作者: truncate(wy940407@163.com)
  * 版本: 1.0
  * 创建日期: 2017年01月03日
  * 创建时间: 16:45
@@ -35,7 +36,6 @@ public class IOUtil
 			try
 			{
 				reader = new BufferedReader(new InputStreamReader(is, charset));
-
 				char[] cache = new char[4 * 1024];
 				int temp;
 				while((temp = reader.read(cache)) != -1)
@@ -65,4 +65,5 @@ public class IOUtil
 		}
 		return content.toString();
 	}
+
 }

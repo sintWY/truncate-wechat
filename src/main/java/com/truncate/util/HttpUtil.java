@@ -1,10 +1,10 @@
 package com.truncate.util;
 
-import com.alibaba.fastjson.JSON;
 import com.truncate.constant.WechatConstant;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
-import org.apache.http.client.config.RequestConfig;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -12,27 +12,29 @@ import org.apache.http.config.*;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.SSLContexts;
-import org.apache.http.entity.ContentType;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.FileBody;
-import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.util.EntityUtils;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.log4j.Logger;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.CodingErrorAction;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class HttpUtil
 {
@@ -49,7 +51,7 @@ public class HttpUtil
 	{
 		try
 		{
-			SSLContext sslContext = SSLContexts.custom().useTLS().build();
+			SSLContext sslContext = SSLContext.getInstance("TLS");
 			sslContext.init(null, new TrustManager[] { new X509TrustManager()
 			{
 
@@ -89,157 +91,205 @@ public class HttpUtil
 		}
 	}
 
-	public static String sendGetRequest(String url, String encoding)
+	/**
+	 *@描述：是否是http连接
+	 *@作者:王功俊(wanggj@thinkive.com)
+	 *@日期:2017/2/22
+	 *@时间:15:15
+	 */
+	public static boolean isHttpUrl(String url)
 	{
-		return sendGetRequest(url, DEFAULT_TIMEOUT_TIME, encoding, null);
-	}
-
-	public static String sendGetRequest(String url)
-	{
-		return sendGetRequest(url, WechatConstant.Encoding.UTF_8);
-	}
-
-	public static String sendGetRequest(String url, Map<String, String> headerMap)
-	{
-		return sendGetRequest(url, DEFAULT_TIMEOUT_TIME, WechatConstant.Encoding.UTF_8, headerMap);
+		return StringUtils.isNotEmpty(url) && (url.startsWith(WechatConstant.WebProtol.HTTP_PROTOL));
 	}
 
 	/**
-	 *@描述：发送get请求
+	 *@描述：是否是https连接
 	 *@作者:王功俊(wanggj@thinkive.com)
-	 *@日期:2016/10/21
-	 *@时间:20:43
+	 *@日期:2017/2/22
+	 *@时间:15:16
 	 */
-	public static String sendGetRequest(String url, int timeout, String encoding, Map<String, String> headerMap)
+	public static boolean isHttpsUrl(String url)
 	{
-		if(checkUrl(url))
-		{
-			return "";
-		}
-		HttpGet get = null;
-		String responseString = "";
-		HttpEntity entity = null;
-		CloseableHttpResponse response = null;
-		try
-		{
-			get = new HttpGet(url);
-			if(headerMap != null && !headerMap.isEmpty())
-			{
-				Set<String> keySet = headerMap.keySet();
-				for(String key : keySet)
-				{
-					get.addHeader(key, headerMap.get(key));
-				}
-			}
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).build();
-			logger.info("@@@@@@ request url：" + url);
-			get.setConfig(requestConfig);
-			response = httpClient.execute(get);
-			entity = response.getEntity();
-			responseString = EntityUtils.toString(entity, encoding);
-			logger.info("@@@@@@ request result：" + responseString);
-		}
-		catch(Exception e)
-		{
-			logger.error("", e);
-		}
-		finally
-		{
-			releaseResource(get, null, response, entity);
-		}
-		return responseString;
-	}
-
-	public static String sendPostRequest(String url, Map<String, String> param, String encoding)
-	{
-		return sendPostRequest(url, param, DEFAULT_TIMEOUT_TIME, encoding);
-	}
-
-	public static String sendPostRequest(String url, Map<String, String> param)
-	{
-		return sendPostRequest(url, param, WechatConstant.Encoding.UTF_8);
+		return StringUtils.isNotEmpty(url) && url.startsWith(WechatConstant.WebProtol.HTTPS_PROTOL);
 	}
 
 	/**
 	 *@描述：发送post请求
 	 *@作者:王功俊(wanggj@thinkive.com)
-	 *@日期:2016/10/21
-	 *@时间:20:58
+	 *@日期:2017/2/22
+	 *@时间:10:23
 	 */
-	public static String sendPostRequest(String url, Map<String, String> requestParam, int timeout, String encoding)
+	public static String doGet(String url, Map<String, String> headers, Map<String, String> querys)
 	{
-		if(checkUrl(url))
+		if(!isHttpUrl(url) && !isHttpsUrl(url))
 		{
-			return "";
+			throw new RuntimeException(String.format("无效的连接地址： %s", url));
 		}
-		HttpPost post = null;
+		String result = "";
+		HttpGet request = new HttpGet(buildUrl(url, querys));
+		if(headers != null && !headers.isEmpty())
+		{
+			for(Map.Entry<String, String> e : headers.entrySet())
+			{
+				request.addHeader(e.getKey(), e.getValue());
+			}
+		}
 		CloseableHttpResponse response = null;
-		String responseString = "";
 		HttpEntity entity = null;
 		try
 		{
-			post = new HttpPost(url);
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(timeout).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).setExpectContinueEnabled(false).build();
-			post.setConfig(requestConfig);
-			String requestParamStr = JSON.toJSONString(requestParam);
-			logger.info("@@@@@@ request url：" + url + "，request param：" + requestParamStr);
-			post.setEntity(new StringEntity(requestParamStr));
-			response = httpClient.execute(post);
+			response = httpClient.execute(request);
 			entity = response.getEntity();
-			responseString = EntityUtils.toString(entity, encoding);
-			logger.info("@@@@@@ request result：" + responseString);
+			result = IOUtil.getTextContent(entity.getContent(), WechatConstant.Encoding.UTF_8);
+
+			if(logger.isDebugEnabled())
+			{
+				logger.debug("@@@@@@ request result：" + result);
+			}
 		}
-		catch(Exception e)
+		catch(IOException e)
 		{
-			logger.error("", e);
+			logger.error("请求异常！", e);
 		}
 		finally
 		{
-			releaseResource(null, post, response, entity);
+			releaseResource(request, null, response, entity);
 		}
-		return responseString;
+		return result;
 	}
 
 	/**
-	 *@描述：上传文件
+	 *@描述：发送post请求
 	 *@作者:王功俊(wanggj@thinkive.com)
-	 *@日期:2017/1/5
-	 *@时间:19:28
+	 *@日期:2017/2/22
+	 *@时间:10:44
+	 * @param url 请求地址
+	 * @param header 请求头
+	 * @param querys 参数
+	 * @param body 请求体
 	 */
-	public static String uploadFile(String url, String filePath)
+	public static String doPost(String url, Map<String, String> headers, Map<String, String> querys, Object body)
 	{
-		if(checkUrl(url))
+		if(!isHttpUrl(url) && !isHttpsUrl(url))
 		{
-			return "";
+			throw new RuntimeException(String.format("无效的连接地址： %s", url));
 		}
-		HttpPost post = null;
+		String result = "";
+		HttpPost request = new HttpPost(buildUrl(url, querys));
+		if(headers != null && !headers.isEmpty())
+		{
+			for(Map.Entry<String, String> e : headers.entrySet())
+			{
+				request.addHeader(e.getKey(), e.getValue());
+			}
+		}
+		if(body != null)
+		{
+			if(body instanceof String)
+			{
+				request.setEntity(new StringEntity((String) body, WechatConstant.Encoding.UTF_8));
+			}
+			else if(body instanceof byte[])
+			{
+				request.setEntity(new ByteArrayEntity((byte[]) body));
+			}
+			else if(body instanceof Map)
+			{
+				Map bodyMap = (Map) body;
+				List<NameValuePair> nameValuePairList = new ArrayList<NameValuePair>();
+				for(Object key : bodyMap.keySet())
+				{
+					String innerKey = (String) key;
+					String innerValue = (String) bodyMap.get(key);
+					nameValuePairList.add(new BasicNameValuePair(innerKey, innerValue));
+				}
+				try
+				{
+					UrlEncodedFormEntity formEntity = new UrlEncodedFormEntity(nameValuePairList, "utf-8");
+					formEntity.setContentType("application/x-www-form-urlencoded; charset=UTF-8");
+					request.setEntity(formEntity);
+				}
+				catch(UnsupportedEncodingException e)
+				{
+					logger.error("", e);
+				}
+			}
+			else if(body instanceof File)
+			{
+				MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+				builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+				builder.addBinaryBody("media", (File) body);
+				request.setEntity(builder.build());
+			}
+		}
 		CloseableHttpResponse response = null;
-		String responseString = "";
 		HttpEntity entity = null;
 		try
 		{
-			post = new HttpPost(url);
-			StringBody comment = new StringBody("A binary file of some kind", ContentType.TEXT_PLAIN);
-			entity = MultipartEntityBuilder.create().addPart("bin", new FileBody(new File(filePath))).addPart("comment", comment).build();
-			post.setEntity(entity);
-			RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(DEFAULT_TIMEOUT_TIME).setConnectTimeout(DEFAULT_TIMEOUT_TIME).setConnectionRequestTimeout(DEFAULT_TIMEOUT_TIME)
-					.setExpectContinueEnabled(false).build();
-			post.setConfig(requestConfig);
-			logger.info("@@@@@@ request line：" + post.getRequestLine());
-			response = httpClient.execute(post);
+			response = httpClient.execute(request);
 			entity = response.getEntity();
-			responseString = EntityUtils.toString(entity, WechatConstant.Encoding.UTF_8);
-			logger.info("@@@@@@ request result：" + responseString);
+			result = IOUtil.getTextContent(entity.getContent(), WechatConstant.Encoding.UTF_8);
+			if(logger.isDebugEnabled())
+			{
+				logger.debug("@@@@@@ request result：" + result);
+			}
 		}
-		catch(Exception e)
+		catch(IOException e)
 		{
-			logger.error("", e);
+			logger.error("请求异常！", e);
 		}
 		finally
 		{
-			releaseResource(null, post, response, entity);
+			releaseResource(null, request, response, entity);
 		}
-		return responseString;
+		return result;
+	}
+
+	private static String buildUrl(String url, Map<String, String> querys)
+	{
+		StringBuilder sbUrl = new StringBuilder();
+		sbUrl.append(url);
+		if(null != querys)
+		{
+			StringBuilder sbQuery = new StringBuilder();
+			for(Map.Entry<String, String> query : querys.entrySet())
+			{
+				if(0 < sbQuery.length())
+				{
+					sbQuery.append("&");
+				}
+				if(StringUtils.isBlank(query.getKey()) && !StringUtils.isBlank(query.getValue()))
+				{
+					sbQuery.append(query.getValue());
+				}
+				if(!StringUtils.isBlank(query.getKey()))
+				{
+					sbQuery.append(query.getKey());
+					if(!StringUtils.isBlank(query.getValue()))
+					{
+						sbQuery.append("=");
+						try
+						{
+							sbQuery.append(URLEncoder.encode(query.getValue(), "utf-8"));
+						}
+						catch(UnsupportedEncodingException e)
+						{
+							logger.error("", e);
+						}
+					}
+				}
+			}
+			if(0 < sbQuery.length())
+			{
+				sbUrl.append("?").append(sbQuery);
+			}
+		}
+		String converUrl = sbUrl.toString();
+		if(logger.isDebugEnabled())
+		{
+			logger.debug("@@@@@@ request url：" + converUrl);
+		}
+		return converUrl;
 	}
 
 	/**
@@ -248,6 +298,7 @@ public class HttpUtil
 	 *@日期:2016/10/21
 	 *@时间:20:58
 	 */
+
 	private static void releaseResource(HttpGet get, HttpPost post, CloseableHttpResponse response, HttpEntity entity)
 	{
 		try
@@ -276,18 +327,6 @@ public class HttpUtil
 		{
 			logger.error("释放资源失败!", e);
 		}
-	}
-
-	private static boolean checkUrl(String url)
-	{
-		return StringUtils.isEmpty(url) || (!url.startsWith(WechatConstant.WebProtol.HTTP_PROTOL) && !url.startsWith(WechatConstant.WebProtol.HTTPS_PROTOL));
-	}
-
-	public static void main(String[] args)
-	{
-		uploadFile(
-				"http://file.api.weixin.qq.com/cgi-bin/media/upload?access_token=8ngv-U9jyltDYxMhIrYOrmDdM2X4AId5nbnDHX4O2BZTNj6g20C62JRgs1kHfzaaY4dRcOEMVFfScAeT5P4sldrPJGoAAz2ldqazyyccd_9HdwnxKwGlHBn3OI2L922FZMEeADALYQ&type=image",
-				"C:\\Users\\lumia\\Desktop\\QQ截图20170105193421.jpg");
 	}
 
 }

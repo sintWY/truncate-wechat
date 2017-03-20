@@ -10,6 +10,7 @@ import com.truncate.util.IOUtil;
 import com.truncate.util.SecurityUtil;
 import com.truncate.util.SpringUtil;
 import com.truncate.util.XmlUtil;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,15 +18,14 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 
 /**
  * 描述: 基础控制类
  * 版权: Copyright (c) 2016
- * 公司: 思迪科技 
- * 作者: 王功俊(wanggj@thinkive.com)
+ * 公司:
+ * 作者: truncate(wy940407@163.com)
  * 版本: 1.0 
  * 创建日期: 2016年12月29日
  * 创建时间: 15:58
@@ -45,22 +45,22 @@ public class WechatRequestController
 		{
 			logger.debug("signature=" + signature + ",timestamp=" + timestamp + ",nonce=" + nonce + ",echostr=" + echostr);
 		}
-		String[] paramArr = new String[] { WechatConstant.WECHAT_TOKEN, timestamp, nonce };
-		Arrays.sort(paramArr);
-		String temp = SecurityUtil.sha1Encrypt(paramArr[0] + paramArr[1] + paramArr[2]);
-		if(temp.equals(signature))
+		if(StringUtils.isNotEmpty(signature) && StringUtils.isNotEmpty(timestamp) && StringUtils.isNotEmpty(nonce) && StringUtils.isNotEmpty(echostr))
 		{
-			return echostr;
+			String[] paramArr = new String[] { WechatConstant.WECHAT_TOKEN, timestamp, nonce };
+			Arrays.sort(paramArr);
+			String temp = SecurityUtil.sha1Encrypt(paramArr[0] + paramArr[1] + paramArr[2]);
+			if(temp.equals(signature))
+			{
+				return echostr;
+			}
 		}
-		else
-		{
-			return "server is working!";
-		}
+		return "server is working!";
 	}
 
 	@ResponseBody
 	@RequestMapping(value = "/request", produces = "text/html;charset=UTF-8", method = RequestMethod.POST)
-	public String receiveMessage(HttpServletRequest request, HttpServletResponse response)
+	public String receiveMessage(HttpServletRequest request)
 	{
 		try
 		{
@@ -73,8 +73,7 @@ public class WechatRequestController
 			IMessageTemplateService templateService = SpringUtil.getBean("IMessageTemplateService", IMessageTemplateService.class);
 			BaseMessageTemplate messageTemplate = templateService.findMatchTemplate(inMessage);
 			OutMessage outMessage = messageTemplate.absExecute(inMessage);
-			String outputContent = XmlUtil.bean2Xml(outMessage);
-			return outputContent;
+			return XmlUtil.bean2Xml(outMessage);
 		}
 		catch(IOException e)
 		{
